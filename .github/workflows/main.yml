@@ -1,0 +1,122 @@
+name: caliprotein
+description: Calistenia en casa con dieta proteica.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.2.3
+  flutter_local_notifications: ^17.2.4
+  timezone: ^0.9.4
+  flutter_timezone: ^3.0.1
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/food/
+
+# CaliProtein: guía para compilar y publicar en Google Play
+
+## 1. Preparar el entorno (en tu ordenador)
+1. Instala Flutter (https://docs.flutter.dev/get-started/install) y Android Studio (incluye el Android SDK).
+2. Ejecuta `flutter doctor` y resuelve lo que marque en rojo (acepta licencias: `flutter doctor --android-licenses`).
+
+## 2. Generar el proyecto Android
+En la carpeta que contiene `lib/` y `pubspec.yaml`:
+
+```
+flutter create --org com.tunombre --project-name caliprotein .
+flutter pub get
+```
+Esto crea la carpeta `android/` sin tocar tu código. El identificador final será `com.tunombre.caliprotein`
+(elige uno definitivo ahora: **no se puede cambiar después de publicar**).
+
+## 3. Ajustes de Android necesarios para las notificaciones
+**android/app/build.gradle(.kts)**: activa desugaring.
+```
+android { compileOptions { isCoreLibraryDesugaringEnabled = true } }   // Kotlin DSL
+dependencies { coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4") }
+```
+(En `build.gradle` Groovy: `coreLibraryDesugaringEnabled true` y `coreLibraryDesugaring '...'`.)
+
+**android/app/src/main/AndroidManifest.xml**, dentro de `<manifest>`:
+```xml
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+<queries>
+  <intent><action android:name="android.intent.action.VIEW"/><data android:scheme="https"/></intent>
+</queries>
+```
+y dentro de `<application>`:
+```xml
+<receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
+<receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+  <intent-filter>
+    <action android:name="android.intent.action.BOOT_COMPLETED"/>
+    <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+  </intent-filter>
+</receiver>
+```
+
+## 4. Fotos de comida
+Lee `assets/food/LEEME.txt`. Usa solo fotos con licencia libre (Unsplash, Pexels) o tuyas.
+No copies fotos de reseñas de Google Maps, TripAdvisor, etc.: tienen derechos de terceros.
+
+## 5. Probar
+`flutter run` con el móvil conectado (depuración USB activada) o un emulador.
+Comprueba: rutinas, temporizador de descanso, dieta, registro de peso y el recordatorio.
+
+## 6. Icono y nombre
+- Icono: paquete `flutter_launcher_icons` con una imagen de 1024×1024 propia.
+- Nombre visible: `android:label` en AndroidManifest.xml.
+
+## 7. Firmar la app
+```
+keytool -genkey -v -keystore ~/caliprotein-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+Crea `android/key.properties` (no lo subas a ningún repositorio):
+```
+storePassword=TU_CLAVE
+keyPassword=TU_CLAVE
+keyAlias=upload
+storeFile=/ruta/completa/caliprotein-upload.jks
+```
+Y configura `signingConfigs` en build.gradle según https://docs.flutter.dev/deployment/android#sign-the-app.
+**Guarda el .jks y las contraseñas en un lugar seguro.**
+
+## 8. Compilar
+- **Para Google Play: `flutter build appbundle --release`** → `build/app/outputs/bundle/release/app-release.aab`
+  (Play exige AAB para apps nuevas, no APK.)
+- Para instalar directamente en tu móvil o compartir: `flutter build apk --release`.
+
+## 9. Cuenta de Google Play Console
+1. https://play.google.com/console → crea cuenta de desarrollador. Pago único de **25 USD**.
+2. Verifica tu identidad (documento y datos de contacto; puede tardar unos días).
+3. Las cuentas personales nuevas suelen tener que hacer una **prueba cerrada con un mínimo de testers
+   durante 14 días seguidos** antes de pedir acceso a producción. Confirma la cifra actual en la ayuda de Play Console.
+
+## 10. Crear la ficha y publicar
+1. "Crear app": nombre, idioma (Español), tipo App, gratuita.
+2. Sube el `.aab` en "Pruebas cerradas" y luego en "Producción".
+3. Rellena obligatoriamente:
+   - **Política de privacidad** (URL pública). La app guarda datos solo en el dispositivo, pero hay que declararlo.
+   - **Seguridad de los datos** (Data safety): no se recopilan ni comparten datos.
+   - **Clasificación de contenido** y **público objetivo** (adultos, +18 recomendado).
+   - **Declaración de apps de salud**, si la pide la consola.
+4. Material gráfico: icono 512×512, gráfico de funciones 1024×500, mínimo 2 capturas de pantalla.
+5. Descripción corta (80 car.) y larga. Evita prometer resultados médicos.
+6. Envía a revisión (de horas a varios días).
+
+## 11. Recomendaciones legales
+- Los vídeos de referentes se abren en YouTube; no los descargues ni los incrustes sin permiso de sus autores.
+- Mantén el aviso médico de la app (ya incluido en Dieta y Ajustes).
